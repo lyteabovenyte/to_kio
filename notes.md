@@ -174,3 +174,25 @@ enum JoinError {
         - Task state (scheduled, running, completed)
         - Waker and context information
 
+- calling an async function returns a anonymous type that implements the `Future` trait. the `Future` trait is something like this. 
+```rust
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
+pub trait Future {
+    type Output;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context)
+        -> Poll<Self::Output>;
+}
+```
+
+- Forgetting to wake a task after returning `Poll::Pending` is a common source of bugs.
+
+- 
+
+
+
+
+
+
