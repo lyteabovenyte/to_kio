@@ -16,7 +16,7 @@ use tokio::sync::{mpsc, oneshot};
 
 /// A scheduled task that can be polled.
 struct Task {
-    future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send>>>>,
+    future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send>>>>, // FutureBox
     task_sender: mpsc::Sender<Arc<Task>>,
 }
 
@@ -69,7 +69,7 @@ impl MiniTokio {
                     let mut future_slot = task.future.lock().unwrap();
                     if let Some(mut fut) = future_slot.take() {
                         let waker = waker_ref(&task);
-                        let mut cx = Context::from_waker(&*waker);
+                        let mut cx = Context::from_waker(&waker);
                         match fut.as_mut().poll(&mut cx) {
                             Poll::Pending => {
                                 *future_slot = Some(fut);
@@ -154,6 +154,7 @@ async fn async_task(id: usize, delay_ms: u64) {
 #[tokio::main]
 async fn main() {
     // --- Local Spawner test ---
+    println!("---- LocalTask Executor ----");
     let spawner = LocalSpawner::new();
     let (tx, rx) = oneshot::channel();
     spawner.spawn(LocalTask::AddOne(10, tx));
@@ -162,6 +163,7 @@ async fn main() {
     println!("Local task result: {result}");
 
     // --- MiniTokio executor test ---
+    println!("---- MiniTokio Executor ----");
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
     let (mut mini_tokio, sender, task_count) = MiniTokio::new(shutdown_rx);
 
@@ -181,6 +183,7 @@ async fn main() {
                 let _ = shutdown_tx.send(());
                 break;
             }
+            // Wait for the tasks to be complete just a little bit.
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
     });
